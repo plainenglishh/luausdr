@@ -123,7 +123,7 @@ local function gain(samples: { number } | { vector }, multiplier_db: number, i: 
 	end
 end
 
-local function convert_block_buffer(b: buffer): { vector }
+local function convert_buffer(b: buffer): { vector }
 	local len = buffer.len(b)
 	assert(len % 8, "expected length to be a multiple of 8 (f32x2)")
 	local sample_count = len // 8
@@ -139,8 +139,8 @@ local function convert_block_buffer(b: buffer): { vector }
 	return block
 end
 
-function Radio.process_block(self: Radio, rf: { vector } | buffer, i: number?, j: number?): { number }
-	local rf = if type(rf) == "table" then rf else convert_block_buffer(rf)
+function Radio.process(self: Radio, rf: { vector } | buffer, i: number?, j: number?): { number }
+	local rf = if type(rf) == "table" then rf else convert_buffer(rf)
 	local i = i or 1
 	local j = j or #rf
 

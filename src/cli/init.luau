@@ -62,7 +62,7 @@ while true do
 		rf[sample_i] = vector.create(i, q)
 	end
 
-	local af = radio:process_block(rf, 1, rf_sample_count)
+	local af = radio:process(rf, 1, rf_sample_count)
 	local af_sample_count = #af
 
 	local output_block = buffer.create(#af * 4)
