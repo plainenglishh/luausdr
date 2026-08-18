@@ -112,17 +112,35 @@ local function demodulate(self: Radio, samples: { vector }): { number }
 	return output
 end
 
-local function gain(samples: { number } | { vector }, multiplier: number, i: number?, j: number?)
+local function gain(samples: { number } | { vector }, multiplier_db: number, i: number?, j: number?)
 	local samples = samples :: { number }
 	local i = i or 1
 	local j = j or #samples
+	local linear_multiplier = 10 * (multiplier_db / 20)
 
 	for sample = i, j do
-		samples[sample] *= multiplier
+		samples[sample] *= linear_multiplier
 	end
 end
 
-function Radio.process_block(self: Radio, rf: { vector }, i: number?, j: number?): { number }
+local function convert_block_buffer(b: buffer): { vector }
+	local len = buffer.len(b)
+	assert(len % 8, "expected length to be a multiple of 8 (f32x2)")
+	local sample_count = len // 8
+
+	local block = table.create(sample_count, vector.zero)
+	for i = 1, sample_count do
+		local offset = (i - 1) * 8
+		local i = buffer.readf32(b, offset)
+		local q: number = buffer.readf32(b, offset + 4)
+		block[i] = vector.create(i, q)
+	end
+
+	return block
+end
+
+function Radio.process_block(self: Radio, rf: { vector } | buffer, i: number?, j: number?): { number }
+	local rf = if type(rf) == "table" then rf else convert_block_buffer(rf)
 	local i = i or 1
 	local j = j or #rf
 
