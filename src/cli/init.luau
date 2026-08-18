@@ -3,13 +3,23 @@ local process = require("@std/process")
 local luausdr = require("./lib")
 local args = process.args
 
+local stderr = fs.open("/dev/stderr", "w")
+local function eprint(...: any)
+	for i = 1, select("#", ...) do
+		fs.write(stderr, tostring(select(i, ...)))
+		fs.write(stderr, "  ")
+	end
+	fs.write(stderr, "\n")
+end
+
 -- args[1] = script/bundle path
 local path = args[2]
-local target_frequency = tonumber(args[3]) or error("invalid target_frequency")
-local centre_frequency = tonumber(args[4]) or error("invalid centre_frequency")
+local target_frequency = luausdr.parse_frequency(args[3]) or error("invalid target_frequency")
+eprint(target_frequency)
+local centre_frequency = luausdr.parse_frequency(args[4]) or error("invalid centre_frequency")
 local mode = string.lower(args[5])
-local rf_sample_rate = tonumber(args[6]) or error("invalid rf_sample_rate")
-local af_sample_rate = tonumber(args[7]) or error("invalid af_sample_rate")
+local rf_sample_rate = luausdr.parse_frequency(args[6]) or error("invalid rf_sample_rate")
+local af_sample_rate = luausdr.parse_frequency(args[7]) or error("invalid af_sample_rate")
 
 local BLOCK_SIZE_SAMPLES = 8192
 local BYTES_PER_SAMPLE = 8 -- 2x f32s
@@ -26,15 +36,6 @@ radio.af_gain = 20
 
 local input = fs.open(path, "r")
 local stdout = fs.open("/dev/stdout", "w")
-local stderr = fs.open("/dev/stderr", "w")
-
-local function eprint(...: any)
-	for i = 1, select("#", ...) do
-		fs.write(stderr, tostring(select(i, ...)))
-		fs.write(stderr, "  ")
-	end
-	fs.write(stderr, "\n")
-end
 
 local raw_block = buffer.create(BLOCK_SIZE_BYTES)
 local rf = table.create(BLOCK_SIZE_SAMPLES, vector.zero)

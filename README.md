@@ -63,7 +63,7 @@ For example:
 
 ```bash
 # Decoding +2.2KHz LSB on an IQ file with an unknown centre.
-lute src/cli/init.luau samples/40m.bin 22000 0 lsb 333333 16000 | ffplay -f f32le -codec:a pcm_f32le -sample_rate 16000 -probesize 32 -
+lute src/cli/init.luau samples/40m.bin 22khz 0 lsb 333333 16000 | ffplay -f f32le -codec:a pcm_f32le -sample_rate 16000 -probesize 32 -
 ```
 
 ## Note
