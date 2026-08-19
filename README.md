@@ -46,14 +46,14 @@ lute src/cli/init.luau -i=<input> -o=<output> -f=<target_frequency> -c=<centre_f
 
 |Name|Description|
 |-|-|
-|`input`|A file path to a `.bin` file containing f32 IQ samples, or `-`/`stdin` for stdin.|
-|`input`|A file path to write a `.bin` file containing f32 IQ samples, `-`/`stdout` for stdout or `ffplay`.|
-|`target_frequency`|The frequency to tune to.|
-|`centre_frequency`|The frequency the IQ data is centred on.|
-|`mode`|The mode to demodulate.|
-|`rf_sample_rate`|The sample rate of incoming RF data.|
-|`af_sample_rate`|The sample rate of outgoing AF data.|
-|`l`|Whether to loop a non-streamed input.`|
+|`input`, `i`|A file path to a `.bin` file containing f32 IQ samples, or `-`/`stdin` for stdin.|
+|`output`, `o`|A file path to write a `.bin` file containing f32 IQ samples, `-`/`stdout` for stdout or `ffplay`.|
+|`target_frequency`, `f`|The frequency to tune to.|
+|`centre_frequency`, `c`|The frequency the IQ data is centred on.|
+|`mode`, `m`|The mode to demodulate.|
+|`rf_sample_rate`, `r`|The sample rate of incoming RF data.|
+|`af_sample_rate`, `a`|The sample rate of outgoing AF data.|
+|`loop`, `l`|Whether to loop a non-streamed input.`|
 
 ### Usage
 
