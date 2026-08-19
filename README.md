@@ -41,29 +41,29 @@ The library itself as no notion of a block size, it is up to the library user wh
 The library comes with a CLI written with Lute:
 
 ```bash
-lute src/cli/init.luau <input> <target_frequency> <centre_frequency> <mode> <rf_sample_rate> <af_sample_rate>
+lute src/cli/init.luau -i=<input> -o=<output> -f=<target_frequency> -c=<centre_frequency> -m=<mode> -r=<rf_sample_rate> -a=<af_sample_rate> [-l]
 ```
 
 |Name|Description|
 |-|-|
-|`input`|A file path to a `.bin` file containing f32 IQ samples.|
+|`input`|A file path to a `.bin` file containing f32 IQ samples, or `-`/`stdin` for stdin.|
+|`input`|A file path to write a `.bin` file containing f32 IQ samples, `-`/`stdout` for stdout or `ffplay`.|
 |`target_frequency`|The frequency to tune to.|
 |`centre_frequency`|The frequency the IQ data is centred on.|
 |`mode`|The mode to demodulate.|
 |`rf_sample_rate`|The sample rate of incoming RF data.|
 |`af_sample_rate`|The sample rate of outgoing AF data.|
+|`l`|Whether to loop a non-streamed input.`|
 
 ### Usage
 
-While wav encoding/decoding are planned, the library currently only works with raw samples. The CLI is best used when piped to ffmpeg.
+While wav encoding/decoding are planned, the library currently only works with raw samples. 
 
-Currently the CLI can only accept a binary file of samples, and emit decoded samples to stdout.
-
-For example:
+The CLI is best used with the ffplay output option:
 
 ```bash
 # Decoding +22KHz LSB on an IQ file with an unknown centre.
-lute src/cli/init.luau samples/40m.bin 22khz 0 lsb 333333 16000 | ffplay -f f32le -codec:a pcm_f32le -sample_rate 16000 -probesize 32 -
+zune run src/bin/init.luau -i=samples/airband.bin -f=900khz -c=0 -m=am -r=3mhz -a=44.1khz -o=ffplay -b=5000
 ```
 
 ## Note
