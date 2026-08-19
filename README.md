@@ -38,10 +38,10 @@ The library itself as no notion of a block size, it is up to the library user wh
 
 ## CLI
 
-The library comes with a CLI written with Lute:
+The library comes with a CLI written with Zune:
 
 ```bash
-lute src/cli/init.luau -i=<input> -o=<output> -f=<target_frequency> -c=<centre_frequency> -m=<mode> -r=<rf_sample_rate> -a=<af_sample_rate> [-l]
+zune run src/bin/init.luau -i=<input> -o=<output> -f=<target_frequency> -c=<centre_frequency> -m=<mode> -r=<rf_sample_rate> -a=<af_sample_rate> [-l]
 ```
 
 |Name|Description|
