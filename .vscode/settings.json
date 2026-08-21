@@ -1,10 +1,12 @@
 {
-    "editor.formatOnSave": true,
-    "luau-lsp.fflags.enableNewSolver": true,
-    "luau-lsp.types.definitionFiles": {
-        "zune": "/home/plain/.zune/typedefs/global/zune.d.luau"
-    },
-    "luau-lsp.types.documentationFiles": [
-        "/home/plain/.zune/typedefs/global/zune.d.json"
-    ]
+  "luau-lsp.platform.type": "standard",
+  "luau-lsp.types.definitionFiles": {
+    "@seal": "./.seal/typedefs/globals.d.luau"
+  },
+  "luau-lsp.fflags.enableNewSolver": true,
+  "luau-lsp.types.documentationFiles": [
+    "./.seal/typedefs/docs.json"
+  ],
+  "editor.formatOnSave": true,
+  "luau-lsp.fflags.enableByDefault": true
 }

@@ -38,10 +38,10 @@ The library itself as no notion of a block size, it is up to the library user wh
 
 ## CLI
 
-The library comes with a CLI written with Zune:
+The library comes with a CLI written with [Seal](https://github.com/seal-runtime/seal):
 
 ```bash
-zune run src/bin/init.luau -i=<input> -o=<output> -f=<target_frequency> -c=<centre_frequency> -m=<mode> -r=<rf_sample_rate> -a=<af_sample_rate> [-l]
+seal r -i=<input> -o=<output> -f=<target_frequency> -c=<centre_frequency> -m=<mode> -r=<rf_sample_rate> -a=<af_sample_rate> [-l]
 ```
 
 |Name|Description|
@@ -63,7 +63,7 @@ The CLI is best used with the ffplay output option:
 
 ```bash
 # Decoding +22KHz LSB on an IQ file with an unknown centre.
-zune run src/bin/init.luau -i=samples/airband.bin -f=900khz -c=0 -m=am -r=3mhz -a=44.1khz -o=ffplay -b=5000
+seal r -i=samples/airband.bin -f=900khz -c=0 -m=am -r=3mhz -a=44.1khz -o=ffplay -b=5000
 ```
 
 ## Note

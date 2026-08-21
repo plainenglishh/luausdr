@@ -1,3 +1,4 @@
 [tools]
 lute = "luau-lang/lute@1.0.1-nightly.20260816"
 zune = "Scythe-Technology/zune@0.5.8"
+seal = "seal-runtime/seal@0.8.0"
