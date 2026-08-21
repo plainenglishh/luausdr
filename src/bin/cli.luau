@@ -1,6 +1,5 @@
 local luausdr = require("../lib")
 local env = require("@std/env")
-local dir = require("@std/fs/dir")
 local io = require("@std/io")
 local process = require("@std/process")
 
