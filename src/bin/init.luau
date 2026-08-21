@@ -2,107 +2,47 @@ local cli = require("@self/cli")
 local sinks = require("@self/sinks")
 local luausdr = require("./lib")
 local sources = require("@self/sources")
-local env = require("@std/env")
 
-local function get_flag(name: string, short: string?): boolean
-    for _, arg in env.args do
-        local long_name, short_name = string.match(arg, "^%-%-(.+)$"), string.match(arg, "^%-(.+)$")
-        if not (long_name or short_name) then
-            continue
-        end
-
-        if long_name ~= name and short_name ~= short then
-            continue
-        end
-
-        return true
-    end
-
-    return false
-end
-
-local function get_opt(name: string, short: string?): string?
-    for _, arg in env.args do
-        local long_name, short_name = string.match(arg, "^%-%-(.+)=.+$"), string.match(arg, "^%-(.+)=.+$")
-        if not (long_name or short_name) then
-            continue
-        end
-
-        if long_name ~= name and short_name ~= short then
-            continue
-        end
-
-        if long_name and short_name then
-            error(`passing both {name} and {short} is amigious`)
-        end
-
-        local value = string.match(arg, "=(.+)$")
-        return value
-    end
-
-    return nil
-end
-
-local function get_frequency(long: string, short: string?): number?
-    local raw = get_opt(long, short)
-    if not raw then
-        return nil
-    end
-
-    return luausdr.parse_frequency(raw) or cli.error(`invald {long}`)
-end
-
-local target_frequency = get_frequency("frequency", "f") or cli.error("specify frequency")
-local centre_frequency = get_frequency("centre_frequency", "c") or 0
-local mode = get_opt("mode", "m") or cli.error("specify mode")
-local rf_sample_rate = get_frequency("rf_sps", "r") or cli.error("specify rf_sps (iq snapshot bandwidth)")
-local af_sample_rate = get_frequency("af_sps", "a") or 44100
-local input_path = get_opt("input", "i") or cli.error("specify input")
-local output_path = get_opt("output", "o") or cli.error("specify output")
-local block_size_samples = tonumber(get_opt("block_size", "b") or "8192") or cli.error("invalid block_size")
-local loop = get_flag("loop", "l")
+local options = cli.args()
 
 local bytes_per_sample = 8 -- 2x f32s
-local block_size_bytes = block_size_samples * bytes_per_sample
+local block_size_bytes = options.block_size * bytes_per_sample
 
-local source = if input_path == "-" or input_path == "stdin" then sources.stdin else sources.file
-cli.assert(if loop then source.loopable else true, `cant loop a {source.name} source`)
+local source = if options.input == "stdin" then sources.stdin else sources.file
+cli.assert(if options.loop then source.loopable else true, `cant loop a {source.name} source`)
 cli.assert(source.available(), `{source.name} is unavailable`)
-local source_handle = source.get({ block_size_samples = block_size_samples, loop = loop }, input_path)
 
-local sink = if output_path == "-" or output_path == "stdout"
+local source_handle = source.get({ block_size_samples = options.block_size, loop = options.loop }, options.input)
+
+local sink = if options.output == "stdout"
     then sinks.stdout
-    elseif output_path == "ffplay" then sinks.ffplay
+    elseif options.output == "ffplay" then sinks.ffplay
     else error("")
 
 cli.assert(sink.available(), `{sink.name} is unavailable`)
-local sink_handle = sink.get({ af_sample_rate = af_sample_rate })
+local sink_handle = sink.get({ af_sample_rate = options.af_rate })
 
-local rx = luausdr.Receiver.new()
+local rx = luausdr.Receiver
+    .new()
+    :set_target_frequency(options.frequency)
+    :set_centre_frequency(options.centre_frequency)
+    :set_mode(options.mode)
+    :set_rf_sample_rate(options.rf_rate)
+    :set_af_sample_rate(options.af_rate)
+    :set_af_gain(20)
 
-rx.target_frequency = target_frequency
-rx.centre_frequency = centre_frequency
-rx.mode = mode :: luausdr.Mode
-rx.rf_sample_rate = rf_sample_rate
-rx.af_sample_rate = af_sample_rate
-rx.af_gain = 20
-
+cli.info(`source/sink:         {options.input} -> {options.output}`)
+cli.info(`looping:             {options.loop}`)
+cli.info(`target frequency:    {options.frequency}hz`)
+cli.info(`centre frequency:    {options.centre_frequency}hz`)
+cli.info(`frequency offset:    {options.frequency - options.centre_frequency}hz`)
+cli.info(`block size:          {options.block_size} samples, {block_size_bytes} bytes`)
 cli.info(
-    `source/sink:         {if input_path == "-" then "stdin" else input_path} -> {if output_path == "-"
-        then "stdout"
-        else output_path}`
-)
-cli.info(`looping:             {loop}`)
-cli.info(`target frequency:    {target_frequency}hz`)
-cli.info(`centre frequency:    {centre_frequency}hz`)
-cli.info(`frequency offset:    {target_frequency - centre_frequency}hz`)
-cli.info(`block size:          {block_size_samples} samples, {block_size_bytes} bytes`)
-cli.info(
-    `sample rate (rf/af): {rf_sample_rate}sps ({math.round((rf_sample_rate * bytes_per_sample)) / 1000}KB/s) / {af_sample_rate}sps ({math.round(
-        (af_sample_rate * 4)
+    `sample rate (rf/af): {options.rf_rate}sps ({math.round((options.rf_rate * bytes_per_sample)) / 1000}KB/s) / {options.af_rate}sps ({math.round(
+        (options.af_rate * 4)
     ) / 1000}KB/s)`
 )
-cli.info(`gain (rf/af):        {rx.rf_gain}db / {rx.af_gain}db`)
+cli.info(`gain (rf/af):        {rx:rf_gain()}db / {rx:af_gain()}db`)
 
 while true do
     if source_handle.closed() then

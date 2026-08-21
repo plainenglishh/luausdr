@@ -1,26 +1,22 @@
+--!native
+
+local common = require("./common")
 export type Mode = "am" | "lsb" | "usb"
-
-local function KHZ(value: number)
-    return value * 1000
-end
-
-local function MHZ(value: number)
-    return value * 1000 * 1000
-end
 
 local Receiver = {}
 export type Receiver = setmetatable<
     {
         --- Options
-        target_frequency: number,
-        centre_frequency: number,
-        rf_sample_rate: number,
-        af_sample_rate: number,
-        rf_gain: number,
-        af_gain: number,
-        mode: Mode,
+        _target_frequency: number,
+        _centre_frequency: number,
+        _rf_sample_rate: number,
+        _af_sample_rate: number,
+        _rf_gain: number,
+        _af_gain: number,
+        _mode: Mode,
 
         --- Internal State
+        _configured: boolean,
         _phase: number,
     },
     typeof(Receiver)
@@ -30,45 +26,100 @@ Receiver.__index = Receiver
 
 function Receiver.new(): Receiver
     return setmetatable({
-        target_frequency = KHZ(1000),
-        centre_frequency = KHZ(1000),
-        rf_sample_rate = MHZ(2),
-        af_sample_rate = KHZ(8),
-        rf_gain = 1,
-        af_gain = 1,
-        mode = "am",
+        --- Rx configuration
+        _target_frequency = 0,
+        _centre_frequency = 0,
+        _mode = "am",
+        _rf_sample_rate = 0,
+        _af_sample_rate = 44100,
+        _rf_gain = 1,
+        _af_gain = 1,
+
+        --- Inter-process state.
+        _configured = false,
         _phase = 0,
     }, Receiver)
 end
 
-local function convert_buffer(b: buffer): { vector }
-    local len = buffer.len(b)
-    assert(len % 8, "expected length to be a multiple of 8 (f32x2)")
-    local sample_count = len // 8
+function Receiver.set_target_frequency(self: Receiver, value: number | string): Receiver
+    self._target_frequency = (if type(value) == "string" then common.parse_frequency(value) else value)
+        or error(`invalid frequency {value}`)
+    return self
+end
 
-    local block = table.create(sample_count, vector.zero)
-    for i = 1, sample_count do
-        local offset = (i - 1) * 8
-        local i = buffer.readf32(b, offset)
-        local q: number = buffer.readf32(b, offset + 4)
-        block[i] = vector.create(i, q)
-    end
+function Receiver.target_frequency(self: Receiver): number
+    return self._target_frequency
+end
 
-    return block
+function Receiver.set_centre_frequency(self: Receiver, value: number | string): Receiver
+    self._centre_frequency = (if type(value) == "string" then common.parse_frequency(value) else value)
+        or error(`invalid frequency {value}`)
+    return self
+end
+
+function Receiver.centre_frequency(self: Receiver): number
+    return self._centre_frequency
+end
+
+function Receiver.set_rf_sample_rate(self: Receiver, value: number | string): Receiver
+    self._rf_sample_rate = (if type(value) == "string" then common.parse_frequency(value) else value)
+        or error(`invalid frequency {value}`)
+    return self
+end
+
+function Receiver.rf_sample_rate(self: Receiver): number
+    return self._rf_sample_rate
+end
+
+function Receiver.set_af_sample_rate(self: Receiver, value: number | string): Receiver
+    self._af_sample_rate = (if type(value) == "string" then common.parse_frequency(value) else value)
+        or error(`invalid frequency {value}`)
+    return self
+end
+
+function Receiver.af_sample_rate(self: Receiver): number
+    return self._af_sample_rate
+end
+
+function Receiver.set_rf_gain(self: Receiver, value: number): Receiver
+    self._rf_gain = value
+    return self
+end
+
+function Receiver.rf_gain(self: Receiver): number
+    return self._rf_gain
+end
+
+function Receiver.set_af_gain(self: Receiver, value: number): Receiver
+    self._af_gain = value
+    return self
+end
+
+function Receiver.af_gain(self: Receiver): number
+    return self._af_gain
+end
+
+function Receiver.set_mode(self: Receiver, value: Mode): Receiver
+    self._mode = value
+    return self
+end
+
+function Receiver.mode(self: Receiver): Mode
+    return self._mode
 end
 
 --[=[
 	digital down converter impl w/ boxcar filter & decimation
 ]=]
 local function down_convert(self: Receiver, input: { vector }, i: number, j: number): { vector }
-    local decimation_factor = self.rf_sample_rate / self.af_sample_rate
+    local decimation_factor = self._rf_sample_rate / self._af_sample_rate
 
     local slice_width = j - i + 1
     local output_count = math.floor(slice_width / decimation_factor)
     local output: { vector } = table.create(output_count, vector.zero)
 
-    local frequency_offset = self.target_frequency - self.centre_frequency
-    local omega = 2 * math.pi * (frequency_offset / self.rf_sample_rate)
+    local frequency_offset = self._target_frequency - self._centre_frequency
+    local omega = 2 * math.pi * (frequency_offset / self._rf_sample_rate)
     local TWO_PI = 2 * math.pi
 
     local accumulator = vector.zero
@@ -105,7 +156,7 @@ end
 local function demodulate(self: Receiver, samples: { vector }): { number }
     local sample_count = #samples
     local output = table.create(sample_count, 0)
-    local mode = self.mode
+    local mode = self._mode
 
     if mode == "am" then
         for i = 1, sample_count do
@@ -122,7 +173,7 @@ local function demodulate(self: Receiver, samples: { vector }): { number }
             output[i] = sample.x + sample.y
         end
     else
-        error(`unknown mode {self.mode}`)
+        error(`unknown mode {self._mode}`)
     end
 
     return output
@@ -143,20 +194,19 @@ local function dc_eliminate(self: Receiver, samples: { vector })
     --- TODO
 end
 
-function Receiver.process(self: Receiver, rf: { vector } | buffer, i: number?, j: number?): { number }
-    local rf = if type(rf) == "table" then rf else convert_buffer(rf)
+function Receiver.process(self: Receiver, rf: { vector }, i: number?, j: number?): { number }
     local i = i or 1
     local j = j or #rf
 
-    gain(rf, self.rf_gain)
+    gain(rf, self._rf_gain)
     local if_ = down_convert(self, rf, i, j)
 
     dc_eliminate(self, if_)
 
     local af = demodulate(self, if_)
-    gain(af, self.af_gain)
+    gain(af, self._af_gain)
 
     return af
 end
 
-return Receiver
+return table.freeze(Receiver)
