@@ -8,8 +8,8 @@ local function MHZ(value: number)
     return value * 1000 * 1000
 end
 
-local Radio = {}
-export type Radio = setmetatable<
+local Receiver = {}
+export type Receiver = setmetatable<
     {
         --- Options
         target_frequency: number,
@@ -23,12 +23,12 @@ export type Radio = setmetatable<
         --- Internal State
         _phase: number,
     },
-    typeof(Radio)
+    typeof(Receiver)
 >
 
-Radio.__index = Radio
+Receiver.__index = Receiver
 
-function Radio.new(): Radio
+function Receiver.new(): Receiver
     return setmetatable({
         target_frequency = KHZ(1000),
         centre_frequency = KHZ(1000),
@@ -38,7 +38,7 @@ function Radio.new(): Radio
         af_gain = 1,
         mode = "am",
         _phase = 0,
-    }, Radio)
+    }, Receiver)
 end
 
 local function convert_buffer(b: buffer): { vector }
@@ -60,7 +60,7 @@ end
 --[=[
 	digital down converter impl w/ boxcar filter & decimation
 ]=]
-local function down_convert(self: Radio, input: { vector }, i: number, j: number): { vector }
+local function down_convert(self: Receiver, input: { vector }, i: number, j: number): { vector }
     local decimation_factor = self.rf_sample_rate / self.af_sample_rate
 
     local slice_width = j - i + 1
@@ -102,7 +102,7 @@ local function down_convert(self: Radio, input: { vector }, i: number, j: number
     return output
 end
 
-local function demodulate(self: Radio, samples: { vector }): { number }
+local function demodulate(self: Receiver, samples: { vector }): { number }
     local sample_count = #samples
     local output = table.create(sample_count, 0)
     local mode = self.mode
@@ -139,11 +139,11 @@ local function gain(samples: { number } | { vector }, multiplier_db: number, i: 
     end
 end
 
-local function dc_eliminate(self: Radio, samples: { vector })
+local function dc_eliminate(self: Receiver, samples: { vector })
     --- TODO
 end
 
-function Radio.process(self: Radio, rf: { vector } | buffer, i: number?, j: number?): { number }
+function Receiver.process(self: Receiver, rf: { vector } | buffer, i: number?, j: number?): { number }
     local rf = if type(rf) == "table" then rf else convert_buffer(rf)
     local i = i or 1
     local j = j or #rf
@@ -159,4 +159,4 @@ function Radio.process(self: Radio, rf: { vector } | buffer, i: number?, j: numb
     return af
 end
 
-return Radio
+return Receiver

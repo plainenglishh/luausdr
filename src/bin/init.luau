@@ -78,14 +78,14 @@ local sink = if output_path == "-" or output_path == "stdout"
 cli.assert(sink.available(), `{sink.name} is unavailable`)
 local sink_handle = sink.get({ af_sample_rate = af_sample_rate })
 
-local radio = luausdr.Radio.new()
+local rx = luausdr.Receiver.new()
 
-radio.target_frequency = target_frequency
-radio.centre_frequency = centre_frequency
-radio.mode = mode :: luausdr.Mode
-radio.rf_sample_rate = rf_sample_rate
-radio.af_sample_rate = af_sample_rate
-radio.af_gain = 20
+rx.target_frequency = target_frequency
+rx.centre_frequency = centre_frequency
+rx.mode = mode :: luausdr.Mode
+rx.rf_sample_rate = rf_sample_rate
+rx.af_sample_rate = af_sample_rate
+rx.af_gain = 20
 
 cli.info(
     `source/sink:         {if input_path == "-" then "stdin" else input_path} -> {if output_path == "-"
@@ -102,7 +102,7 @@ cli.info(
         (af_sample_rate * 4)
     ) / 1000}KB/s)`
 )
-cli.info(`gain (rf/af):        {radio.rf_gain}db / {radio.af_gain}db`)
+cli.info(`gain (rf/af):        {rx.rf_gain}db / {rx.af_gain}db`)
 
 while true do
     if source_handle.closed() then
@@ -119,7 +119,7 @@ while true do
         break
     end
 
-    local af_samples = radio:process(rf_samples, 1, rf_sample_count)
+    local af_samples = rx:process(rf_samples, 1, rf_sample_count)
     sink_handle.play(af_samples)
 end
 
