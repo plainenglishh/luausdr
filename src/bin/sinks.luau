@@ -90,8 +90,6 @@ sinks.ffplay = {
         })
 
         local ffplay_pipe = ffplay.stdin or cli.error("failed to get ffplay pipe")
-        repeat
-        until ffplay:alive()
 
         return {
             play = function(samples: { number })
